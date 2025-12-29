@@ -81,9 +81,32 @@ body{
   box-shadow: var(--shadow);
   background: #0a0f14;
 }
-#map{ height:100%; width:100%; }
+
+/* Force Leaflet map to behave like a background layer */
+#map{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  height:100%;
+  width:100%;
+}
+
+/* Make tiles look like "radar" */
 .leaflet-tile{
   filter: grayscale(1) contrast(1.25) brightness(.92);
+}
+
+/* Optional "radar glass" overlay for the old mocked vibe */
+.mapWrap::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:5;               /* above map, below HUD/reticle/buttons */
+  pointer-events:none;
+  background:
+    radial-gradient(600px 380px at 50% 50%, rgba(126,231,135,.06), transparent 70%),
+    linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.25));
+  mix-blend-mode: screen;
 }
 
 .reticle{
@@ -95,6 +118,7 @@ body{
   height: 64px;
   pointer-events:none;
   opacity:.95;
+  z-index:10;
 }
 .reticle:before, .reticle:after{
   content:"";
@@ -131,6 +155,7 @@ body{
   justify-content:space-between;
   gap:10px;
   pointer-events:none;
+  z-index:10;
 }
 .hudBox{
   pointer-events:none;
@@ -152,6 +177,7 @@ body{
   display:flex;
   gap:8px;
   pointer-events:auto;
+  z-index:10;
 }
 .btn{
   border:1px solid var(--line);
@@ -291,7 +317,7 @@ body{
   align-items:flex-end;
   justify-content:center;
   padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
-  z-index:50;
+  z-index:5000; /* above Leaflet panes/controls */
 }
 .overlay.show{ display:flex; }
 
@@ -485,7 +511,7 @@ body{
   align-items:center;
   justify-content:center;
   padding: 18px;
-  z-index:80;
+  z-index:6000; /* above overlay */
 }
 .modal.show{ display:flex; }
 
