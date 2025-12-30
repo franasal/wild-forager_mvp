@@ -4,6 +4,8 @@ import { renderDeck } from "./deck.js";
 import { initSpecimen, openSpecimen } from "./specimen.js";
 import { initRiskModal } from "./risk.js";
 import { aggregateHotspots, mergeHotspots } from "./hotspots.js";
+import { resolveTaxonKey, fetchOccurrencesByTaxa } from "./gbif.js";
+
 
 function debug(msg){
   console.log("[Wilder]", msg);
@@ -30,14 +32,12 @@ function initTheme(){
   });
 }
 
-async function loadPlants(){
+ async function loadPlants(){
   debug("loadPlants()");
-
-  document.getElementById("hudMode").textContent = "Loading data…";
+  document.getElementById("hudMode").textContent = "Loading plant metadata…";
 
   const res = await fetch("data/plants.json", { cache: "no-store" });
   if(!res.ok) throw new Error("Failed to load data/plants.json");
-
   const data = await res.json();
 
   state.region = data.region || {
@@ -46,6 +46,8 @@ async function loadPlants(){
   };
 
   const rawPlants = data.plants || [];
+
+  // Keep your mock demo occurrences as fallback
   state.plants = rawPlants.map(p => {
     const demoOcc = (p.demo && Array.isArray(p.demo.occurrences)) ? p.demo.occurrences : [];
     const occurrences = demoOcc.map(o => ({
@@ -59,18 +61,24 @@ async function loadPlants(){
 
     const frequency = occurrences.reduce((sum, o) => sum + (Number(o.occurrenceCount) || 1), 0);
 
-    return {
-      ...p,
-      occurrences,
-      frequency
-    };
+    return { ...p, occurrences, frequency, taxonKey: p.taxonKey ?? null };
   });
+
+  // Resolve missing taxonKeys (scientificName required)
+  document.getElementById("hudMode").textContent = "Resolving GBIF taxa…";
+  for(const p of state.plants){
+    if(Number.isFinite(p.taxonKey)) continue;
+    const key = await resolveTaxonKey(p.scientificName);
+    if(key) p.taxonKey = key;
+  }
 
   document.getElementById("regionPill").textContent =
     `Region: ${state.region?.name || "Local Starter Pack"}`;
 
   document.getElementById("hudMode").textContent =
-    "Wikimedia images + demo occurrences (MVP)";
+    "Ready (Mock fallback + GBIF taxa resolved)";
+  debug(`loaded ${state.plants.length} plants`);
+ }
 
   debug(`loaded ${state.plants.length} plants`);
 }
