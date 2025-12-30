@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { monthIndex, monthLabel, escapeHtml, plantIconSVG, seasonBadge, haversineKm } from "./utils.js";
+import { monthIndex, monthLabel, escapeHtml, seasonBadge, haversineKm } from "./utils.js";
 
 function plantNearestDistanceKm(plant, lat, lon){
   let best = Infinity;
@@ -51,6 +51,11 @@ export function renderDeck({ onSelectPlant }){
     const obs = Number.isFinite(p.frequency) ? p.frequency : ((p.occurrences || []).length);
     const distText = (dist === Infinity) ? "no points" : `${dist.toFixed(1)} km`;
 
+    const imgUrl = p.image?.filePath || "";
+    const imgHtml = imgUrl
+      ? `<img class="miniPhoto" src="${escapeHtml(imgUrl)}" alt="${escapeHtml(p.commonName || p.scientificName || "plant")}">`
+      : `<div class="miniPhotoFallback">No image</div>`;
+
     const card = document.createElement("div");
     card.className = "cardMini";
     card.innerHTML = `
@@ -61,7 +66,7 @@ export function renderDeck({ onSelectPlant }){
         </div>
         <div class="badge ${cls}">${label}</div>
       </div>
-      <div class="miniVisual">${plantIconSVG(p.id || p.scientificName || "plant")}</div>
+      <div class="miniVisual">${imgHtml}</div>
       <div class="miniBottom">
         <span>Obs: <b>${obs}</b> · Nearest: <b>${distText}</b></span>
         <span><b>${escapeHtml(season)}</b></span>
