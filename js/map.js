@@ -4,6 +4,7 @@ import { escapeHtml } from "./utils.js";
 let map;
 let userMarker;
 let occurrencesLayer;
+let hotspotsLayer;
 
 export function initMap(){
   map = L.map("map", { zoomControl:false }).setView([state.userLat, state.userLon], 12);
@@ -17,6 +18,7 @@ export function initMap(){
     fillOpacity: 1
   }).addTo(map);
 
+  hotspotsLayer = L.layerGroup().addTo(map);
   occurrencesLayer = L.layerGroup().addTo(map);
 }
 
@@ -27,8 +29,61 @@ export function setLocation(lat, lon){
   map.setView([lat, lon], 13, { animate:true });
 }
 
-export function plotAllOccurrences(){
+export function clearMapLayers(){
+  hotspotsLayer.clearLayers();
   occurrencesLayer.clearLayers();
+}
+
+/**
+ * Draw hotspot circles from aggregated cells.
+ * @param {{cells:Array<{lat:number, lon:number, count:number, monthCounts:number[]}>}} hotspots
+ * @param {{title?:string}} opts
+ */
+export function showHotspots(hotspots, opts = {}){
+  clearMapLayers();
+
+  const pts = [];
+  const title = opts.title || "Hotspot";
+
+  const cells = hotspots?.cells || [];
+  if(!cells.length) return;
+
+  // normalize by max count for nicer scaling
+  const max = Math.max(...cells.map(c => c.count || 0), 1);
+
+  for(const c of cells){
+    const lat = c.lat;
+    const lon = c.lon;
+    if(typeof lat !== "number" || typeof lon !== "number") continue;
+
+    pts.push([lat, lon]);
+
+    const count = c.count || 0;
+    const intensity = count / max;
+
+    // radius 6..24-ish (log-ish feel without math drama)
+    const radius = 6 + (18 * Math.sqrt(intensity));
+    const fillOpacity = Math.min(0.85, 0.15 + 0.7 * intensity);
+
+    L.circleMarker([lat, lon], {
+      radius,
+      weight: 1,
+      color: "rgba(126,231,135,.65)",
+      fillColor: "rgba(126,231,135,.35)",
+      fillOpacity
+    })
+    .bindPopup(
+      `<b>${escapeHtml(title)}</b><br>` +
+      `Observations: <b>${escapeHtml(count)}</b>`
+    )
+    .addTo(hotspotsLayer);
+  }
+
+  map.fitBounds(L.latLngBounds(pts), { padding:[20,20] });
+}
+
+export function plotAllOccurrences(){
+  clearMapLayers();
 
   const pts = [];
   for(const p of state.plants){
@@ -67,7 +122,7 @@ export function plotAllOccurrences(){
 }
 
 export function showPlantOnMap(plant){
-  occurrencesLayer.clearLayers();
+  clearMapLayers();
 
   const pts = [];
   for(const o of (plant.occurrences || [])){
