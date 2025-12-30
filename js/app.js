@@ -11,15 +11,42 @@ async function loadPlants(){
   if(!res.ok) throw new Error("Failed to load data/plants.json");
 
   const data = await res.json();
-  state.region = data.region || null;
 
-  state.plants = (data.plants || []).map(p => ({
-    ...p,
-    frequency: (p.occurrences || []).length
-  }));
+  // Support both shapes:
+  // A) { region, plants: [...] } (old)
+  // B) { plants: [...] } (new file you generated)
+  state.region = data.region || {
+    name: "Leipzig (demo)",
+    center: { lat: 51.3397, lon: 12.3731 }
+  };
 
-  document.getElementById("regionPill").textContent = `Region: ${state.region?.name || "Local Starter Pack"}`;
-  document.getElementById("hudMode").textContent = "Mock GBIF-like occurrences (MVP)";
+  const rawPlants = data.plants || [];
+  state.plants = rawPlants.map(p => {
+    // Convert "demo.occurrences" => "occurrences" in the structure the app expects
+    const demoOcc = (p.demo && Array.isArray(p.demo.occurrences)) ? p.demo.occurrences : [];
+    const occurrences = demoOcc.map(o => ({
+      decimalLatitude: o.lat,
+      decimalLongitude: o.lon,
+      eventDate: o.date,
+      occurrenceCount: o.gbif_occurrence_count,
+      verbatimLocality: p.demo?.region || "",
+      recordedBy: ""
+    }));
+
+    const frequency = occurrences.reduce((sum, o) => sum + (Number(o.occurrenceCount) || 1), 0);
+
+    return {
+      ...p,
+      occurrences,
+      frequency
+    };
+  });
+
+  document.getElementById("regionPill").textContent =
+    `Region: ${state.region?.name || "Local Starter Pack"}`;
+
+  document.getElementById("hudMode").textContent =
+    "Wikimedia images + demo occurrences (MVP)";
 }
 
 function locate(){
@@ -54,17 +81,16 @@ async function main(){
   try{
     await loadPlants();
 
-    // Center on region if provided
     if(state.region?.center && typeof state.region.center.lat === "number" && typeof state.region.center.lon === "number"){
       setLocation(state.region.center.lat, state.region.center.lon);
     }
 
     plotAllOccurrences();
     renderDeck({ onSelectPlant });
-    locate(); // try to override with real GPS after initial load
+    locate();
   } catch(e){
     console.error(e);
-    document.getElementById("hudMode").textContent = "Missing data file: data/plants.json";
+    document.getElementById("hudMode").textContent = "Missing/invalid data file: data/plants.json";
     document.getElementById("regionPill").textContent = "Region: Error";
   }
 }
