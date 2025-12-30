@@ -112,7 +112,7 @@ async function main(){
       setLocation(state.region.center.lat, state.region.center.lon);
     }
 
-    plotAllOccurrences();
+    showAllHotspots();
     renderDeck({ onSelectPlant });
     locate();
   } catch(e){
