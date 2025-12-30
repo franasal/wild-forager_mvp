@@ -151,9 +151,51 @@ async function main(){
       setLocation(state.region.center.lat, state.region.center.lon);
     }
 
+    async function loadRealGbifDataNearUser(){
+  debug("GBIF fetch");
+
+  const lat = state.userLat;
+  const lon = state.userLon;
+
+  if(typeof lat !== "number" || typeof lon !== "number"){
+    debug("GBIF skipped (no location)");
+    return;
+  }
+
+  const plantsWithKeys = state.plants.filter(p => Number.isFinite(p.taxonKey));
+  if(!plantsWithKeys.length){
+    document.getElementById("hudMode").textContent = "No GBIF taxon keys available (using mock data).";
+    return;
+  }
+
+  document.getElementById("hudMode").textContent = "Fetching GBIF observations…";
+
+  const { byTaxonKey, total } = await fetchOccurrencesByTaxa(lat, lon, plantsWithKeys, {
+    radiusKm: 10,
+    limit: 300
+  });
+
+  // Attach fetched occurrences to plants (overwrite mock for “real mode”)
+  for(const p of state.plants){
+    if(!Number.isFinite(p.taxonKey)) continue;
+    const occ = byTaxonKey.get(p.taxonKey) || [];
+    p.occurrences = occ;
+
+    // recompute frequency for deck badges (count of points)
+    p.frequency = occ.length;
+  }
+
+  document.getElementById("hudMode").textContent = `GBIF loaded: ${total} records (10km)`;
+  debug(`GBIF total ${total}`);
+    }
+
     showAllHotspots();
     renderDeck({ onSelectPlant });
     locate();
+
+    await loadRealGbifDataNearUser();
+showAllHotspots();
+renderDeck({ onSelectPlant });
 
     debug("ok");
   } catch(e){
