@@ -11,6 +11,25 @@ function debug(msg){
   if(el) el.textContent = "Boot: " + msg;
 }
 
+function initTheme(){
+  const saved = localStorage.getItem("wilder_theme");
+  if(saved === "light") document.body.classList.add("light");
+
+  const btn = document.getElementById("btnTheme");
+  const setLabel = () => {
+    const isLight = document.body.classList.contains("light");
+    btn.textContent = isLight ? "Dark" : "Bright";
+  };
+
+  setLabel();
+
+  btn.addEventListener("click", () => {
+    document.body.classList.toggle("light");
+    localStorage.setItem("wilder_theme", document.body.classList.contains("light") ? "light" : "dark");
+    setLabel();
+  });
+}
+
 async function loadPlants(){
   debug("loadPlants()");
 
