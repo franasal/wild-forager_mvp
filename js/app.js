@@ -135,6 +135,7 @@ async function main(){
 
     debug("wireButtons()");
     wireButtons();
+    initTheme();
 
     await loadPlants();
 
