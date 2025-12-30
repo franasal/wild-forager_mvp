@@ -26,7 +26,11 @@ export function initSpecimen(){
   document.getElementById("btnCulinary").addEventListener("click", () => {
     if(!state.selected) return;
 
-    const r = state.selected.recipe || { prep:"", simple:"", pairing:"" };
+    const r = state.selected.recipe || {
+  prep: "Wash thoroughly. Remove tough stems if needed.",
+  simple: "Quick sauté: olive oil, garlic, greens, salt. 3–5 minutes.",
+  pairing: "Goes well with garlic, lemon, nuts, and grains."
+};
     document.getElementById("recipeBody").innerHTML = `
       <div class="note"><b>Preparation:</b> ${escapeHtml(r.prep || "—")}</div>
       <div class="noteLine"></div>
