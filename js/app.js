@@ -159,10 +159,19 @@ function wireButtons(){
   if(locateBtn) locateBtn.addEventListener("click", locate);
 
   const resortBtn = document.getElementById("btnResort");
-  if(resortBtn) resortBtn.addEventListener("click", () => {
-    // this currently just refreshes the deck using current sorting
+if(resortBtn){
+  const syncLabel = () => {
+    const m = state.filters?.sortMode || "timeless";
+    resortBtn.textContent = (m === "season") ? "This season" : "Timeless";
+  };
+
+  syncLabel();
+
+  resortBtn.addEventListener("click", () => {
+    state.filters = state.filters || {};
+    state.filters.sortMode = (state.filters.sortMode === "season") ? "timeless" : "season";
+    syncLabel();
     renderDeck({ onSelectPlant });
-    renderCurrentViz();
   });
 }
 
