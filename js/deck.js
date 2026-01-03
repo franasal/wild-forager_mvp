@@ -16,7 +16,11 @@ function plantNearestDistanceKm(plant, lat, lon){
 function sortedPlants(){
   const m = monthIndex();
   const base = state.selectedPlants.length ? state.selectedPlants : state.plants;
+  const base = (state.selectedPlants && state.selectedPlants.length)
+  ? state.selectedPlants
+  : state.plants;
   const arr = [...base].map(p => {
+
     const season = (p.seasonality && p.seasonality[m]) ? p.seasonality[m] : "Low";
     const seasonRank = (season === "High") ? 3 : (season === "Medium" ? 2 : 1);
     const dist = plantNearestDistanceKm(p, state.userLat, state.userLon);
