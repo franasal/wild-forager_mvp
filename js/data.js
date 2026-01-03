@@ -115,6 +115,8 @@ export async function loadDataset(){
 
   state.plants = plants;
 
+  assignRarityBadges();
+
   // initial selection
   recomputeSelection();
 
@@ -160,6 +162,44 @@ export function recomputeLocalStatsIfMoved(thresholdKm = 1.0){
 
     p.localCount10km = c;
     p.localMonthCounts10km = monthCounts;
+  }
+}
+
+function computeQuantile(sortedArr, q){
+  if(!sortedArr.length) return 0;
+  const pos = (sortedArr.length - 1) * q;
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  const a = sortedArr[base];
+  const b = sortedArr[Math.min(base + 1, sortedArr.length - 1)];
+  return a + rest * (b - a);
+}
+
+function assignRarityBadges(){
+  const totals = state.plants
+    .map(p => Number(p.total))
+    .filter(v => Number.isFinite(v) && v > 0)
+    .sort((a,b) => a - b);
+
+  if(!totals.length){
+    for(const p of state.plants) p.rarity = "Unknown";
+    return;
+  }
+
+  const p25 = computeQuantile(totals, 0.25);
+  const p75 = computeQuantile(totals, 0.75);
+
+  for(const p of state.plants){
+    const t = Number(p.total);
+    if(!Number.isFinite(t) || t <= 0){
+      p.rarity = "Unknown";
+    } else if(t < p25){
+      p.rarity = "Rare";
+    } else if(t >= p75){
+      p.rarity = "Common";
+    } else {
+      p.rarity = "Medium";
+    }
   }
 }
 
