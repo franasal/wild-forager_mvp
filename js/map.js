@@ -53,10 +53,15 @@ export function showHotspots(hotspots, opts = {}){
     pts.push([lat, lon]);
 
     const count = c.count || 0;
-    const intensity = count / max;
+    const count = c.count || 0;
 
-    const radius = 6 + (18 * Math.sqrt(intensity));
-    const fillOpacity = Math.min(0.85, 0.15 + 0.7 * intensity);
+    const totalLine = Number.isFinite(c.totalCount)
+      ? `Total (window): <b>${escapeHtml(String(c.totalCount))}</b><br>`
+      : "";
+
+    const seasonLine = Number.isFinite(c.seasonCount)
+      ? `Season (prev/this/next): <b>${escapeHtml(String(c.seasonCount))}</b><br>`
+      : "";
 
     L.circleMarker([lat, lon], {
       radius,
@@ -67,10 +72,11 @@ export function showHotspots(hotspots, opts = {}){
     })
     .bindPopup(
       `<b>${escapeHtml(title)}</b><br>` +
-      `Observations: <b>${escapeHtml(count)}</b>`
+      seasonLine +
+      totalLine +
+      `Intensity: <b>${escapeHtml(String(count))}</b>`
     )
     .addTo(hotspotsLayer);
-  }
 
   map.fitBounds(L.latLngBounds(pts), { padding:[20,20] });
 }
