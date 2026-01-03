@@ -51,8 +51,6 @@ export function showHotspots(hotspots, opts = {}){
     if(typeof lat !== "number" || typeof lon !== "number") continue;
 
     pts.push([lat, lon]);
-
-    const count = c.count || 0;
     const count = c.count || 0;
 
     const totalLine = Number.isFinite(c.totalCount)
