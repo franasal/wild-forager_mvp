@@ -271,7 +271,28 @@ body.light .topNControl input{
   -webkit-overflow-scrolling: touch;
 }
 .deck::-webkit-scrollbar{ display:none; }
+.segToggle{
+  display:flex;
+  border:1px solid var(--line);
+  border-radius: 14px;
+  overflow:hidden;
+  background: rgba(16,27,38,.75);
+  box-shadow: 0 8px 18px rgba(0,0,0,.35);
+}
 
+.segBtn{
+  border:0;
+  background: transparent;
+  color: var(--muted);
+  padding: 10px 12px;
+  font-size: 13px;
+  cursor:pointer;
+}
+
+.segBtn.active{
+  color: var(--ink);
+  background: rgba(126,231,135,.12);
+}
 .cardMini{
   scroll-snap-align: start;
   flex: 0 0 72%;
