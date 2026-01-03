@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { monthIndex, monthLabel, escapeHtml, seasonBadge, haversineKm } from "./utils.js";
+import { escapeHtml, haversineKm, monthLabel } from "./utils.js";
 
 function plantNearestDistanceKm(plant, lat, lon){
   let best = Infinity;
@@ -13,24 +13,31 @@ function plantNearestDistanceKm(plant, lat, lon){
   return best;
 }
 
+function rarityBadge(rarity){
+  // Map rarity -> label/class used by CSS badge colors
+  if(rarity === "Common") return { label: "Common", cls: "common" };
+  if(rarity === "Medium") return { label: "Medium", cls: "medium" };
+  if(rarity === "Rare") return { label: "Rare", cls: "rare" };
+  return { label: "Unknown", cls: "medium" };
+}
+
 function sortedPlants(){
-  const m = monthIndex();
-
   const base = (state.selectedPlants && state.selectedPlants.length)
-  ? state.selectedPlants
-  : state.plants;
-  const arr = [...base].map(p => {
+    ? state.selectedPlants
+    : state.plants;
 
-    const season = (p.seasonality && p.seasonality[m]) ? p.seasonality[m] : "Low";
-    const seasonRank = (season === "High") ? 3 : (season === "Medium" ? 2 : 1);
+  const arr = [...base].map(p => {
     const dist = plantNearestDistanceKm(p, state.userLat, state.userLon);
-    return { p, season, seasonRank, dist };
+    const local = Number.isFinite(p.localCount10km) ? p.localCount10km : 0;
+    const total = Number.isFinite(p.total) ? p.total : 0;
+    return { p, dist, local, total };
   });
 
+  // Sort: local relevance first, then nearest point, then global total, then name
   arr.sort((a,b) =>
+    (b.local - a.local) ||
     (a.dist - b.dist) ||
-    (b.seasonRank - a.seasonRank) ||
-    ((b.p.frequency || 0) - (a.p.frequency || 0)) ||
+    (b.total - a.total) ||
     (a.p.commonName || "").localeCompare(b.p.commonName || "")
   );
 
@@ -51,11 +58,11 @@ export function renderDeck({ onSelectPlant }){
 
   deckEl.innerHTML = "";
 
-  for(const {p, season, dist} of items){
-    const {label, cls} = seasonBadge(season);
-    const local = Number.isFinite(p.localCount10km) ? p.localCount10km : 0;
-    const total = Number.isFinite(p.total) ? p.total : null;
-    const obsText = total != null ? `${local} near · ${total} total` : `${local} near`;
+  for(const {p, dist, local, total} of items){
+    const {label, cls} = rarityBadge(p.rarity);
+
+    const totalText = Number.isFinite(p.total) ? `${p.total} total` : "total ?";
+    const obsText = `${local} near · ${totalText}`;
     const distText = (dist === Infinity) ? "no points" : `${dist.toFixed(1)} km`;
 
     const imgUrl = p.image?.filePath || "";
@@ -71,12 +78,12 @@ export function renderDeck({ onSelectPlant }){
           <strong>${escapeHtml(p.commonName || "Unknown")}</strong>
           <em>${escapeHtml(p.scientificName || "")}</em>
         </div>
-        <div class="badge ${cls}">${label}</div>
+        <div class="badge ${cls}">${escapeHtml(label)}</div>
       </div>
       <div class="miniVisual">${imgHtml}</div>
       <div class="miniBottom">
-        <span>Obs: <b>${escapeHtml(obsText)}</b> · Nearest: <b>${distText}</b></span>
-        <span><b>${escapeHtml(season)}</b></span>
+        <span>Obs: <b>${escapeHtml(obsText)}</b> · Nearest: <b>${escapeHtml(distText)}</b></span>
+        <span><b>${escapeHtml(p.rarity || "Unknown")}</b></span>
       </div>
     `;
 
