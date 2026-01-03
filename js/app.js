@@ -6,7 +6,6 @@ import { initRiskModal } from "./risk.js";
 import { aggregateHotspots, mergeHotspots } from "./hotspots.js";
 import { loadDataset, recomputeSelection, recomputeLocalStatsIfMoved } from "./data.js";
 
-
 function debug(msg){
   console.log("[Wilder]", msg);
   const el = document.getElementById("debugPill");
@@ -32,67 +31,6 @@ function initTheme(){
   });
 }
 
-async function loadPlants(){
-  debug("loadPlants()");
-
-  document.getElementById("hudMode").textContent = "Loading data…";
-
-  const res = await fetch("data/plants.json", { cache: "no-store" });
-  if(!res.ok) throw new Error("Failed to load data/plants.json");
-
-  const data = await res.json();
-
-  state.region = data.region || {
-    name: "Leipzig (demo)",
-    center: { lat: 51.3397, lon: 12.3731 }
-  };
-
-  const rawPlants = data.plants || [];
-  state.plants = rawPlants.map(p => {
-    const demoOcc = (p.demo && Array.isArray(p.demo.occurrences)) ? p.demo.occurrences : [];
-    const occurrences = demoOcc.map(o => ({
-      decimalLatitude: o.lat,
-      decimalLongitude: o.lon,
-      eventDate: o.date,
-      occurrenceCount: o.gbif_occurrence_count,
-      verbatimLocality: p.demo?.region || "",
-      recordedBy: ""
-    }));
-
-    const frequency = occurrences.reduce((sum, o) => sum + (Number(o.occurrenceCount) || 1), 0);
-
-    return {
-      ...p,
-      occurrences,
-      frequency
-    };
-  });
-
-  document.getElementById("regionPill").textContent =
-    `Region: ${state.region?.name || "Local Starter Pack"}`;
-
-  document.getElementById("hudMode").textContent =
-    "Wikimedia images + demo occurrences (MVP)";
-
-  debug(`loaded ${state.plants.length} plants`);
-}
-
-function locate(){
-  debug("locate()");
-  if(!navigator.geolocation) return;
-
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      setLocation(pos.coords.latitude, pos.coords.longitude);
-      recomputeLocalStatsIfMoved(1.0);
-      recomputeSelection();
-      renderDeck({ onSelectPlant });
-    },
-    () => {},
-    { enableHighAccuracy:true, timeout: 8000, maximumAge: 60000 }
-  );
-}
-
 function onSelectPlant(plant){
   showPlantOnMap(plant);
   openSpecimen(plant);
@@ -107,52 +45,124 @@ function lastDaysRange(days){
 function showAllHotspots(){
   debug("showAllHotspots()");
   const { start, end } = lastDaysRange(365);
-  const plants = (state.selectedPlants && state.selectedPlants.length)
-  ? state.selectedPlants
-  : state.plants;
 
-const perPlant = plants.map(p =>
-  aggregateHotspots(p.occurrences || [], { gridKm: 1, start, end })
-);
+  const plants = (state.selectedPlants && state.selectedPlants.length)
+    ? state.selectedPlants
+    : state.plants;
+
+  const perPlant = plants.map(p =>
+    aggregateHotspots(p.occurrences || [], { gridKm: 1, start, end })
+  );
 
   const merged = mergeHotspots(perPlant);
-  showHotspots(merged, { title: "All plants (last 365 days)" });
+  showHotspots(merged, { title: "Selected plants (last 365 days)" });
 }
+
+function showAllPoints(){
+  plotAllOccurrences();
+}
+
+function locate(){
+  debug("locate()");
+  if(!navigator.geolocation) return;
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      setLocation(pos.coords.latitude, pos.coords.longitude);
+
+      // recompute local counts only if user moved
+      recomputeLocalStatsIfMoved(1.0);
+
+      // refresh selection + UI
+      recomputeSelection();
+      renderDeck({ onSelectPlant });
+
+      // re-render current viz
+      renderCurrentViz();
+    },
+    () => {},
+    { enableHighAccuracy:true, timeout: 8000, maximumAge: 60000 }
+  );
+}
+
+// ----------------------------
+// Multi-select viz mode chips
+// ----------------------------
+function setChipActive(id, on){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.toggle("active", !!on);
+  el.setAttribute("aria-pressed", on ? "true" : "false");
+}
+
+function getVizMode(){
+  state.filters = state.filters || {};
+
+  const hotspotsOn = state.filters.vizHotspots !== false; // default true
+  const pointsOn = state.filters.vizPoints === true;      // default false
+
+  // if both selected, choose one to render (hotspots wins)
+  if(hotspotsOn) return "hotspots";
+  if(pointsOn) return "points";
+  return "hotspots";
+}
+
+function syncVizChipsUI(){
+  state.filters = state.filters || {};
+  const hotspotsOn = state.filters.vizHotspots !== false;
+  const pointsOn = state.filters.vizPoints === true;
+
+  setChipActive("btnVizHotspots", hotspotsOn);
+  setChipActive("btnVizPoints", pointsOn);
+}
+
+function toggleVizChip(which){
+  state.filters = state.filters || {};
+  if(which === "hotspots"){
+    state.filters.vizHotspots = !(state.filters.vizHotspots !== false) ? true : false;
+  }
+  if(which === "points"){
+    state.filters.vizPoints = !(state.filters.vizPoints === true) ? true : false;
+  }
+
+  // prevent "none selected": if both off, turn hotspots back on
+  const hotspotsOn = state.filters.vizHotspots !== false;
+  const pointsOn = state.filters.vizPoints === true;
+  if(!hotspotsOn && !pointsOn){
+    state.filters.vizHotspots = true;
+  }
+
+  syncVizChipsUI();
+  renderCurrentViz();
+}
+
+function renderCurrentViz(){
+  const mode = getVizMode();
+  if(mode === "points") showAllPoints();
+  else showAllHotspots();
+}
+
+function wireVizChips(){
+  const a = document.getElementById("btnVizHotspots");
+  const b = document.getElementById("btnVizPoints");
+  if(a) a.addEventListener("click", () => toggleVizChip("hotspots"));
+  if(b) b.addEventListener("click", () => toggleVizChip("points"));
+}
+
+// ----------------------------
 
 function wireButtons(){
   debug("wireButtons()");
-  wireVizToggle()
-  document.getElementById("btnLocate").addEventListener("click", locate);
-  document.getElementById("btnResort").addEventListener("click", () => renderDeck({ onSelectPlant }));
-  }
+  wireVizChips();
 
+  const locateBtn = document.getElementById("btnLocate");
+  if(locateBtn) locateBtn.addEventListener("click", locate);
 
-function setVizMode(mode){
-  state.filters = state.filters || {};
-  state.filters.vizMode = mode;
-
-  if(mode === "points"){
-    plotAllOccurrences();
-  } else {
-    showAllHotspots();
-  }
-
-  // update toggle UI
-  const box = document.getElementById("vizToggle");
-  if(box){
-    for(const b of box.querySelectorAll(".segBtn")){
-      b.classList.toggle("active", b.dataset.mode === mode);
-    }
-  }
-}
-
-function wireVizToggle(){
-  const box = document.getElementById("vizToggle");
-  if(!box) return;
-  box.addEventListener("click", (e) => {
-    const btn = e.target.closest(".segBtn");
-    if(!btn) return;
-    setVizMode(btn.dataset.mode);
+  const resortBtn = document.getElementById("btnResort");
+  if(resortBtn) resortBtn.addEventListener("click", () => {
+    // this currently just refreshes the deck using current sorting
+    renderDeck({ onSelectPlant });
+    renderCurrentViz();
   });
 }
 
@@ -175,7 +185,11 @@ async function main(){
 
     await loadDataset();
 
-    setVizMode(state.filters?.vizMode || "hotspots");
+    // initialize chip state defaults + UI
+    state.filters = state.filters || {};
+    if(state.filters.vizHotspots === undefined) state.filters.vizHotspots = true;
+    if(state.filters.vizPoints === undefined) state.filters.vizPoints = false;
+    syncVizChipsUI();
 
     if(state.region?.center && typeof state.region.center.lat === "number" && typeof state.region.center.lon === "number"){
       setLocation(state.region.center.lat, state.region.center.lon);
@@ -190,49 +204,15 @@ async function main(){
 
         recomputeSelection();
         renderDeck({ onSelectPlant });
-        plotAllOccurrences();
-        showAllHotspots();
+        renderCurrentViz();
       });
     }
 
-    // Optional live GBIF block (only runs if the function exists)
-    if(typeof fetchOccurrencesByTaxa === "function"){
-      const lat = state.userLat;
-      const lon = state.userLon;
-
-      if(typeof lat === "number" && typeof lon === "number"){
-        const plantsWithKeys = state.plants.filter(p => Number.isFinite(p.taxonKey));
-        if(plantsWithKeys.length){
-          document.getElementById("hudMode").textContent = "Fetching GBIF observations…";
-
-          const { byTaxonKey, total } = await fetchOccurrencesByTaxa(lat, lon, plantsWithKeys, {
-            radiusKm: 10,
-            limit: 300
-          });
-
-          for(const p of state.plants){
-            if(!Number.isFinite(p.taxonKey)) continue;
-            const occ = byTaxonKey.get(p.taxonKey) || [];
-            p.occurrences = occ;
-            p.frequency = occ.length;
-          }
-
-          // Recompute top-N after overwriting occurrences
-          recomputeSelection();
-
-          document.getElementById("hudMode").textContent = `GBIF loaded: ${total} records (10km)`;
-          debug(`GBIF total ${total}`);
-        } else {
-          document.getElementById("hudMode").textContent = "No GBIF taxon keys available (offline dataset).";
-        }
-      } else {
-        debug("GBIF skipped (no location)");
-      }
-    }
-
     // Initial render
-    showAllHotspots();
     renderDeck({ onSelectPlant });
+    renderCurrentViz();
+
+    // Try locating user (optional)
     locate();
 
     debug("ok");
