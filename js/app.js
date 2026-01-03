@@ -105,7 +105,8 @@ function showAllHotspots(){
   debug("showAllHotspots()");
   const { start, end } = lastDaysRange(365);
 
-  const perPlant = state.plants.map(p =>
+  const plants = state.selectedPlants.length ? state.selectedPlants : state.plants;
+  const perPlant = plants.map(p =>
     aggregateHotspots(p.occurrences || [], { gridKm: 1, start, end })
   );
 
