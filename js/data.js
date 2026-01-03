@@ -55,6 +55,11 @@ function normalizePlant({ sciName, deName, taxonKey, points, yearCounts, total, 
       verbatimLocality: state.region?.name || "",
       recordedBy: ""
     };
+    const monthCountsAll = Array(12).fill(0);
+for(const o of occurrences){
+  const mi = monthIndexFromEventDate(o.eventDate);
+  if(mi != null) monthCountsAll[mi] += 1;
+}
   });
 
   return {
@@ -77,6 +82,7 @@ function normalizePlant({ sciName, deName, taxonKey, points, yearCounts, total, 
     // computed per user location
     localCount10km: 0,
     localMonthCounts10km: Array(12).fill(0),
+    monthCountsAll,
   };
 }
 
