@@ -4,6 +4,7 @@ import { renderDeck } from "./deck.js";
 import { initSpecimen, openSpecimen } from "./specimen.js";
 import { initRiskModal } from "./risk.js";
 import { aggregateHotspots, mergeHotspots } from "./hotspots.js";
+import { recomputeSelection } from "./data.js";
 import { loadDataset, recomputeSelection } from "./data.js";
 
 function debug(msg){
@@ -184,8 +185,20 @@ async function main(){
   debug(`GBIF total ${total}`);
     }
 
-    showAllHotspots();
-    renderDeck({ onSelectPlant });
+  
+  const topNEl = document.getElementById("topN");
+  if(topNEl){
+    topNEl.addEventListener("change", () => {
+      state.filters = state.filters || {};
+      state.filters.topN = Number(topNEl.value) || 12;
+  
+      recomputeSelection();
+      renderDeck({ onSelectPlant });
+      plotAllOccurrences();
+
+    });
+  }
+
     locate();
 
   
