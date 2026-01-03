@@ -106,9 +106,13 @@ function showAllHotspots(){
   const { start, end } = lastDaysRange(365);
 
   const plants = state.selectedPlants.length ? state.selectedPlants : state.plants;
-  const perPlant = plants.map(p =>
-    aggregateHotspots(p.occurrences || [], { gridKm: 1, start, end })
-  );
+  const plants = (state.selectedPlants && state.selectedPlants.length)
+  ? state.selectedPlants
+  : state.plants;
+
+const perPlant = plants.map(p =>
+  aggregateHotspots(p.occurrences || [], { gridKm: 1, start, end })
+);
 
   const merged = mergeHotspots(perPlant);
   showHotspots(merged, { title: "All plants (last 365 days)" });
