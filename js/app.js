@@ -121,10 +121,39 @@ const perPlant = plants.map(p =>
 
 function wireButtons(){
   debug("wireButtons()");
+  wireVizToggle()
   document.getElementById("btnLocate").addEventListener("click", locate);
-  document.getElementById("btnAll").addEventListener("click", plotAllOccurrences);
   document.getElementById("btnResort").addEventListener("click", () => renderDeck({ onSelectPlant }));
-  document.getElementById("btnHotspots").addEventListener("click", showAllHotspots);
+  }
+
+
+function setVizMode(mode){
+  state.filters = state.filters || {};
+  state.filters.vizMode = mode;
+
+  if(mode === "points"){
+    plotAllOccurrences();
+  } else {
+    showAllHotspots();
+  }
+
+  // update toggle UI
+  const box = document.getElementById("vizToggle");
+  if(box){
+    for(const b of box.querySelectorAll(".segBtn")){
+      b.classList.toggle("active", b.dataset.mode === mode);
+    }
+  }
+}
+
+function wireVizToggle(){
+  const box = document.getElementById("vizToggle");
+  if(!box) return;
+  box.addEventListener("click", (e) => {
+    const btn = e.target.closest(".segBtn");
+    if(!btn) return;
+    setVizMode(btn.dataset.mode);
+  });
 }
 
 async function main(){
@@ -145,6 +174,8 @@ async function main(){
     initTheme();
 
     await loadDataset();
+
+    setVizMode(state.filters?.vizMode || "hotspots");
 
     if(state.region?.center && typeof state.region.center.lat === "number" && typeof state.region.center.lon === "number"){
       setLocation(state.region.center.lat, state.region.center.lon);
