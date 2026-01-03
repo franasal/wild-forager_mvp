@@ -75,7 +75,7 @@ export function renderDeck({ onSelectPlant }){
       </div>
       <div class="miniVisual">${imgHtml}</div>
       <div class="miniBottom">
-        <span>Obs: <b>${obs}</b> · Nearest: <b>${distText}</b></span>
+        <span>Obs: <b>${escapeHtml(obsText)}</b> · Nearest: <b>${distText}</b></span>
         <span><b>${escapeHtml(season)}</b></span>
       </div>
     `;
