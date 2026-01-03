@@ -24,7 +24,6 @@ function haversineKm(lat1, lon1, lat2, lon2){
 
 function monthIndexFromEventDate(s){
   if(!s) return null;
-  // expected "YYYY-MM-01"
   const m = Number(String(s).slice(5,7));
   if(!Number.isFinite(m) || m < 1 || m > 12) return null;
   return m - 1;
@@ -50,17 +49,34 @@ function normalizePlant({ sciName, deName, taxonKey, points, yearCounts, total, 
     return {
       decimalLatitude: lat,
       decimalLongitude: lon,
+      year,
+      month,
       eventDate: toEventDate(year, month),
       occurrenceCount: 1,
       verbatimLocality: state.region?.name || "",
       recordedBy: ""
     };
-    const monthCountsAll = Array(12).fill(0);
-for(const o of occurrences){
-  const mi = monthIndexFromEventDate(o.eventDate);
-  if(mi != null) monthCountsAll[mi] += 1;
-}
   });
+
+  // all-time month counts
+  const monthCountsAll = Array(12).fill(0);
+  for(const o of occurrences){
+    const mi = monthIndexFromEventDate(o.eventDate);
+    if(mi != null) monthCountsAll[mi] += 1;
+  }
+
+  // last 3 years month counts (rolling)
+  const nowYear = new Date().getFullYear();
+  const yearFrom = nowYear - 2;
+  const monthCountsLast3Y = Array(12).fill(0);
+  for(const o of occurrences){
+    const y = Number(o.year);
+    const m = Number(o.month);
+    if(!Number.isFinite(y) || !Number.isFinite(m)) continue;
+    if(y < yearFrom || y > nowYear) continue;
+    if(m < 1 || m > 12) continue;
+    monthCountsLast3Y[m - 1] += 1;
+  }
 
   return {
     id: sciName,
@@ -82,7 +98,12 @@ for(const o of occurrences){
     // computed per user location
     localCount10km: 0,
     localMonthCounts10km: Array(12).fill(0),
+
+    // seasonality helpers
     monthCountsAll,
+    monthCountsLast3Y,
+
+    rarity: "Unknown"
   };
 }
 
@@ -101,8 +122,8 @@ export async function loadDataset(){
   };
 
   // optional images map (keep it optional so the app still boots)
-  // expected: { "Urtica dioica": { "filePath": "...", "creditText": "...", "creditUrl": "..." }, ... }
   const images = await fetchJsonOrNull("data/plants_wikipedia_images.json");
+
   const plantsObj = data.plants || {};
   const plants = [];
 
@@ -171,6 +192,9 @@ export function recomputeLocalStatsIfMoved(thresholdKm = 1.0){
   }
 }
 
+// --------------------
+// rarity (global) via quantiles on total counts
+// --------------------
 function computeQuantile(sortedArr, q){
   if(!sortedArr.length) return 0;
   const pos = (sortedArr.length - 1) * q;
@@ -216,7 +240,7 @@ export function recomputeSelection(){
   state.filters = state.filters || {};
   const topN = Math.max(1, Number(state.filters.topN) || 12);
 
-  // selection should prefer "near you" frequency, then fall back to global totals
+  // prefer "near you" then total
   const sorted = [...state.plants].sort((a,b) =>
     (b.localCount10km || 0) - (a.localCount10km || 0) ||
     (Number(b.total) || 0) - (Number(a.total) || 0) ||
