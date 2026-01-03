@@ -42,9 +42,37 @@ function lastDaysRange(days){
   return { start, end };
 }
 
+function seasonalizeHotspots(hs){
+  const cells = hs?.cells || [];
+  if(!cells.length) return hs;
+
+  const m = (new Date()).getMonth(); // 0..11
+  const prev = (m + 11) % 12;
+  const next = (m + 1) % 12;
+
+  const out = {
+    ...hs,
+    cells: cells.map(c => {
+      const mc = Array.isArray(c.monthCounts) ? c.monthCounts : Array(12).fill(0);
+      const seasonCount = (mc[prev] || 0) + (mc[m] || 0) + (mc[next] || 0);
+      return {
+        ...c,
+        totalCount: c.count || 0,
+        seasonCount,
+        count: seasonCount // IMPORTANT: this drives radius/intensity in map.js
+      };
+    }).sort((a,b) => (b.count || 0) - (a.count || 0))
+  };
+
+  return out;
+}
+
 function showAllHotspots(){
   debug("showAllHotspots()");
-  const { start, end } = lastDaysRange(365);
+
+  const mode = state.filters?.sortMode || "timeless";
+  const days = (mode === "season") ? (365 * 3) : 365; // season mode uses last 3 years
+  const { start, end } = lastDaysRange(days);
 
   const plants = (state.selectedPlants && state.selectedPlants.length)
     ? state.selectedPlants
@@ -54,8 +82,14 @@ function showAllHotspots(){
     aggregateHotspots(p.occurrences || [], { gridKm: 1, start, end })
   );
 
-  const merged = mergeHotspots(perPlant);
-  showHotspots(merged, { title: "Selected plants (last 365 days)" });
+  let merged = mergeHotspots(perPlant);
+
+  if(mode === "season"){
+    merged = seasonalizeHotspots(merged);
+    showHotspots(merged, { title: `This season (last ${days} days)` });
+  } else {
+    showHotspots(merged, { title: `All plants (last ${days} days)` });
+  }
 }
 
 function showAllPoints(){
