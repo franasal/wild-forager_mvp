@@ -5,9 +5,5 @@ export const state = {
   userLat: 51.3397,
   userLon: 12.3731,
   selected: null,
-  filters: {
-    topN: 12,
-    yearFrom: null,
-    yearTo: null,
-  },
+  filters: { topN: 12, seasonMode: "season" },
 };
