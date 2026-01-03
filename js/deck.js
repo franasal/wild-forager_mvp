@@ -15,7 +15,7 @@ function plantNearestDistanceKm(plant, lat, lon){
 
 function sortedPlants(){
   const m = monthIndex();
-  const base = state.selectedPlants.length ? state.selectedPlants : state.plants;
+
   const base = (state.selectedPlants && state.selectedPlants.length)
   ? state.selectedPlants
   : state.plants;
