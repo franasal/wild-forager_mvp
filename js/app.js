@@ -4,6 +4,7 @@ import { renderDeck } from "./deck.js";
 import { initSpecimen, openSpecimen } from "./specimen.js";
 import { initRiskModal } from "./risk.js";
 import { aggregateHotspots, mergeHotspots } from "./hotspots.js";
+import { loadDataset, recomputeSelection } from "./data.js";
 
 function debug(msg){
   console.log("[Wilder]", msg);
@@ -137,14 +138,11 @@ async function main(){
     wireButtons();
     initTheme();
 
-    await loadPlants();
+    await loadDataset();
 
     if(state.region?.center && typeof state.region.center.lat === "number" && typeof state.region.center.lon === "number"){
       setLocation(state.region.center.lat, state.region.center.lon);
     }
-
-    async function loadRealGbifDataNearUser(){
-  debug("GBIF fetch");
 
   const lat = state.userLat;
   const lon = state.userLon;
@@ -185,7 +183,7 @@ async function main(){
     renderDeck({ onSelectPlant });
     locate();
 
-    await loadRealGbifDataNearUser();
+  
 showAllHotspots();
 renderDeck({ onSelectPlant });
 
