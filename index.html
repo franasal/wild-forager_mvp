@@ -17,8 +17,8 @@
         <span>Foraging MVP (Local Edition)</span>
       </div>
       <div class="pill" id="regionPill">Region: Loading…</div>
-<button class="pill pillBtn" id="btnTheme" type="button">Bright</button>
-<div class="pill" id="debugPill">Boot: …</div>
+      <button class="pill pillBtn" id="btnTheme" type="button">Bright</button>
+      <div class="pill" id="debugPill">Boot: …</div>
     </div>
 
     <div class="radar">
@@ -34,21 +34,24 @@
           <div class="reticlePulse"></div>
         </div>
 
-    <div class="btnRow">
-      <div class="btn" id="btnLocate">Locate</div>
-      <div class="segToggle" id="vizToggle">
-      <button class="segBtn active" data-mode="hotspots" type="button">Hotspots</button>
-      <button class="segBtn" data-mode="points" type="button">All points</button>
-      </div>
-      <div class="btn" id="btnResort">Resort</div>
-    
-      <div class="btnRowSpacer"></div>
-    
-      <label class="topNControl" for="topN">
-        Top
-        <input id="topN" type="number" min="1" max="200" value="12" inputmode="numeric">
-      </label>
-    </div>
+        <div class="btnRow">
+          <div class="btn" id="btnLocate">Locate</div>
+
+          <!-- multi-select viz chips -->
+          <div class="chipRow" id="vizChips">
+            <button class="chipBtn active" id="btnVizHotspots" type="button" aria-pressed="true">Hotspots</button>
+            <button class="chipBtn" id="btnVizPoints" type="button" aria-pressed="false">All points</button>
+          </div>
+
+          <div class="btn" id="btnResort">Resort</div>
+
+          <div class="btnRowSpacer"></div>
+
+          <label class="topNControl" for="topN">
+            Top
+            <input id="topN" type="number" min="1" max="200" value="12" inputmode="numeric">
+          </label>
+        </div>
 
       </div><!-- CLOSE mapWrap -->
 
@@ -80,7 +83,6 @@
 
       <div class="sheetBody">
         <div class="specVisual" id="specVisual"></div>
-
         <div class="grid" id="specGrid"></div>
 
         <div class="block" id="specIdBlock">
