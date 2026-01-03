@@ -193,20 +193,21 @@ function wireButtons(){
   if(locateBtn) locateBtn.addEventListener("click", locate);
 
   const resortBtn = document.getElementById("btnResort");
-if(resortBtn){
-  const syncLabel = () => {
-    const m = state.filters?.sortMode || "timeless";
-    resortBtn.textContent = (m === "season") ? "This season" : "Timeless";
-  };
+  if(resortBtn){
+    const syncLabel = () => {
+      const m = state.filters?.sortMode || "timeless";
+      resortBtn.textContent = (m === "season") ? "This season" : "Timeless";
+    };
 
-  syncLabel();
-
-  resortBtn.addEventListener("click", () => {
-    state.filters = state.filters || {};
-    state.filters.sortMode = (state.filters.sortMode === "season") ? "timeless" : "season";
     syncLabel();
-    renderDeck({ onSelectPlant });
-  });
+
+    resortBtn.addEventListener("click", () => {
+      state.filters = state.filters || {};
+      state.filters.sortMode = (state.filters.sortMode === "season") ? "timeless" : "season";
+      syncLabel();
+      renderDeck({ onSelectPlant });
+    });
+  }
 }
 
 async function main(){
