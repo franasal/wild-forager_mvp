@@ -79,7 +79,8 @@ export function plotAllOccurrences(){
   clearMapLayers();
 
   const pts = [];
-  for(const p of state.plants){
+  for(const p of (state.selectedPlants.length ? state.selectedPlants : state.plants)){
+
     for(const o of (p.occurrences || [])){
       const lat = o.decimalLatitude;
       const lon = o.decimalLongitude;
