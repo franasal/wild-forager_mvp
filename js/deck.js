@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { escapeHtml, haversineKm, monthLabel } from "./utils.js";
+import { escapeHtml, haversineKm, monthLabel, monthIndex } from "./utils.js";
 
 function plantNearestDistanceKm(plant, lat, lon){
   let best = Infinity;
@@ -14,11 +14,34 @@ function plantNearestDistanceKm(plant, lat, lon){
 }
 
 function rarityBadge(rarity){
-  // Map rarity -> label/class used by CSS badge colors
   if(rarity === "Common") return { label: "Common", cls: "common" };
   if(rarity === "Medium") return { label: "Medium", cls: "medium" };
   if(rarity === "Rare") return { label: "Rare", cls: "rare" };
   return { label: "Unknown", cls: "medium" };
+}
+
+function seasonScore(plant){
+  // Score = prev + current + next month counts, prioritizing local counts
+  const m = monthIndex(); // 0..11
+  const prev = (m + 11) % 12;
+  const next = (m + 1) % 12;
+
+  const local = plant.localMonthCounts10km;
+  if(Array.isArray(local) && local.length === 12){
+    return (local[prev] || 0) + (local[m] || 0) + (local[next] || 0);
+  }
+
+  const last3 = plant.monthCountsLast3Y;
+  if(Array.isArray(last3) && last3.length === 12){
+    return (last3[prev] || 0) + (last3[m] || 0) + (last3[next] || 0);
+  }
+
+  const all = plant.monthCountsAll;
+  if(Array.isArray(all) && all.length === 12){
+    return (all[prev] || 0) + (all[m] || 0) + (all[next] || 0);
+  }
+
+  return 0;
 }
 
 function sortedPlants(){
@@ -26,20 +49,34 @@ function sortedPlants(){
     ? state.selectedPlants
     : state.plants;
 
+  const mode = state.filters?.sortMode || "timeless";
+
   const arr = [...base].map(p => {
     const dist = plantNearestDistanceKm(p, state.userLat, state.userLon);
     const local = Number.isFinite(p.localCount10km) ? p.localCount10km : 0;
     const total = Number.isFinite(p.total) ? p.total : 0;
-    return { p, dist, local, total };
+    const season = seasonScore(p);
+    return { p, dist, local, total, season };
   });
 
-  // Sort: local relevance first, then nearest point, then global total, then name
-  arr.sort((a,b) =>
-    (b.local - a.local) ||
-    (a.dist - b.dist) ||
-    (b.total - a.total) ||
-    (a.p.commonName || "").localeCompare(b.p.commonName || "")
-  );
+  if(mode === "season"){
+    // This season: local season score > nearest > local total > global total
+    arr.sort((a,b) =>
+      (b.season - a.season) ||
+      (a.dist - b.dist) ||
+      (b.local - a.local) ||
+      (b.total - a.total) ||
+      (a.p.commonName || "").localeCompare(b.p.commonName || "")
+    );
+  } else {
+    // Timeless: local total > nearest > global total
+    arr.sort((a,b) =>
+      (b.local - a.local) ||
+      (a.dist - b.dist) ||
+      (b.total - a.total) ||
+      (a.p.commonName || "").localeCompare(b.p.commonName || "")
+    );
+  }
 
   return arr;
 }
@@ -58,9 +95,10 @@ export function renderDeck({ onSelectPlant }){
 
   deckEl.innerHTML = "";
 
-  for(const {p, dist, local, total} of items){
+  for(const {p, dist} of items){
     const {label, cls} = rarityBadge(p.rarity);
 
+    const local = Number.isFinite(p.localCount10km) ? p.localCount10km : 0;
     const totalText = Number.isFinite(p.total) ? `${p.total} total` : "total ?";
     const obsText = `${local} near · ${totalText}`;
     const distText = (dist === Infinity) ? "no points" : `${dist.toFixed(1)} km`;
