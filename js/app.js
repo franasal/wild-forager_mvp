@@ -4,7 +4,8 @@ import { renderDeck } from "./deck.js";
 import { initSpecimen, openSpecimen } from "./specimen.js";
 import { initRiskModal } from "./risk.js";
 import { aggregateHotspots, mergeHotspots } from "./hotspots.js";
-import { loadDataset, recomputeSelection } from "./data.js";
+import { loadDataset, recomputeSelection, recomputeLocalStatsIfMoved } from "./data.js";
+
 
 function debug(msg){
   console.log("[Wilder]", msg);
@@ -83,6 +84,8 @@ function locate(){
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       setLocation(pos.coords.latitude, pos.coords.longitude);
+      recomputeLocalStatsIfMoved(1.0);
+      recomputeSelection();
       renderDeck({ onSelectPlant });
     },
     () => {},
