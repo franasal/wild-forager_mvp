@@ -1,13 +1,50 @@
 import { state } from "./state.js";
 
+// --------------------
+// helpers
+// --------------------
 function toEventDate(year, month){
   if(!Number.isFinite(year)) return null;
   const m = Number.isFinite(month) ? String(month).padStart(2, "0") : "01";
   return `${year}-${m}-01`;
 }
 
-function normalizePlant({ sciName, deName, taxonKey, points, yearCounts }){
-  // points can be tuples: [lat, lon, year, month]
+function haversineKm(lat1, lon1, lat2, lon2){
+  const R = 6371;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function monthIndexFromEventDate(s){
+  if(!s) return null;
+  // expected "YYYY-MM-01"
+  const m = Number(String(s).slice(5,7));
+  if(!Number.isFinite(m) || m < 1 || m > 12) return null;
+  return m - 1;
+}
+
+async function fetchJsonOrNull(url){
+  try{
+    const res = await fetch(url, { cache: "no-store" });
+    if(!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+// --------------------
+// normalization
+// --------------------
+function normalizePlant({ sciName, deName, taxonKey, points, yearCounts, total, image }){
+  // points tuples: [lat, lon, year, month]
   const occurrences = (points || []).map(t => {
     const lat = t[0], lon = t[1], year = t[2], month = t[3];
     return {
@@ -20,19 +57,32 @@ function normalizePlant({ sciName, deName, taxonKey, points, yearCounts }){
     };
   });
 
-  const frequency = occurrences.length;
-
   return {
     id: sciName,
     commonName: deName || sciName,
     scientificName: sciName,
     taxonKey: Number.isFinite(taxonKey) ? taxonKey : undefined,
-    yearCounts: yearCounts || {}, // for later charts
+
+    // true counts (NOT capped)
+    total: Number.isFinite(total) ? total : undefined,
+    yearCounts: yearCounts || {},
+
+    // capped points (for rendering)
     occurrences,
-    frequency
+    frequency: occurrences.length,
+
+    // optional UI assets
+    image: image || null,
+
+    // computed per user location
+    localCount10km: 0,
+    localMonthCounts10km: Array(12).fill(0),
   };
 }
 
+// --------------------
+// dataset load
+// --------------------
 export async function loadDataset(){
   const res = await fetch("data/occurrences_compact.json", { cache: "no-store" });
   if(!res.ok) throw new Error("Failed to load data/occurrences_compact.json");
@@ -44,6 +94,9 @@ export async function loadDataset(){
     center: { lat: 51.3397, lon: 12.3731 }
   };
 
+  // optional images map (keep it optional so the app still boots)
+  // expected: { "Urtica dioica": { "filePath": "...", "creditText": "...", "creditUrl": "..." }, ... }
+  const images = await fetchJsonOrNull("data/plants_wikipedia_images.json");
   const plantsObj = data.plants || {};
   const plants = [];
 
@@ -54,26 +107,75 @@ export async function loadDataset(){
       deName: p.de || p.german_name || "",
       taxonKey: p.taxonKey,
       points: p.points || [],
-      yearCounts: p.year_counts || p.years || {}
+      yearCounts: p.year_counts || p.years || {},
+      total: p.total,
+      image: images?.[sciName] || null,
     }));
   }
 
   state.plants = plants;
 
-  // initial selection = top N by frequency
+  // initial selection
   recomputeSelection();
+
+  // initial local stats (if we already have a location)
+  recomputeLocalStatsIfMoved(1.0);
 
   return state.plants;
 }
 
+// --------------------
+// local stats near user
+// --------------------
+export function recomputeLocalStatsIfMoved(thresholdKm = 1.0){
+  const lat = state.userLat;
+  const lon = state.userLon;
+  if(typeof lat !== "number" || typeof lon !== "number") return;
+
+  const prev = state._lastStatsLocation;
+  if(prev && typeof prev.lat === "number" && typeof prev.lon === "number"){
+    const moved = haversineKm(prev.lat, prev.lon, lat, lon);
+    if(moved < thresholdKm) return; // skip recompute
+  }
+
+  state._lastStatsLocation = { lat, lon };
+
+  const radiusKm = 10;
+  for(const p of state.plants){
+    let c = 0;
+    const monthCounts = Array(12).fill(0);
+
+    for(const o of (p.occurrences || [])){
+      const olat = o.decimalLatitude;
+      const olon = o.decimalLongitude;
+      if(typeof olat !== "number" || typeof olon !== "number") continue;
+
+      const d = haversineKm(lat, lon, olat, olon);
+      if(d > radiusKm) continue;
+
+      c += 1;
+      const mi = monthIndexFromEventDate(o.eventDate);
+      if(mi != null) monthCounts[mi] += 1;
+    }
+
+    p.localCount10km = c;
+    p.localMonthCounts10km = monthCounts;
+  }
+}
+
+// --------------------
+// selection
+// --------------------
 export function recomputeSelection(){
+  state.filters = state.filters || {};
   const topN = Math.max(1, Number(state.filters.topN) || 12);
 
-  // If you want "top by Germany total", you can use p.total later.
+  // selection should prefer "near you" frequency, then fall back to global totals
   const sorted = [...state.plants].sort((a,b) =>
-    (b.frequency || 0) - (a.frequency || 0) ||
+    (b.localCount10km || 0) - (a.localCount10km || 0) ||
+    (Number(b.total) || 0) - (Number(a.total) || 0) ||
     (a.commonName || "").localeCompare(b.commonName || "")
   );
 
   state.selectedPlants = sorted.slice(0, topN);
-                                        }
+}
