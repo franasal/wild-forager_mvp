@@ -11,15 +11,18 @@
   --shadow: 0 10px 35px rgba(0,0,0,.55);
   --radius:22px;
 }
+
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   color:var(--ink);
-  background: radial-gradient(1200px 800px at 40% -10%, rgba(126,231,135,.10), transparent 60%),
-              radial-gradient(900px 700px at 110% 30%, rgba(255,204,102,.08), transparent 55%),
-              var(--bg);
+  background:
+    radial-gradient(1200px 800px at 40% -10%, rgba(126,231,135,.10), transparent 60%),
+    radial-gradient(900px 700px at 110% 30%, rgba(255,204,102,.08), transparent 55%),
+    var(--bg);
   overflow:hidden;
 }
 
@@ -42,6 +45,7 @@ body{
   background: rgba(15,23,32,.65);
   backdrop-filter: blur(10px);
 }
+
 .brand{
   display:flex;
   flex-direction:column;
@@ -50,6 +54,7 @@ body{
 }
 .brand strong{ font-size:16px; letter-spacing:.2px; }
 .brand span{ font-size:12px; color:var(--muted); }
+
 .pill{
   font-size:12px;
   border:1px solid var(--line);
@@ -96,12 +101,12 @@ body{
   filter: grayscale(1) contrast(1.25) brightness(.92);
 }
 
-/* Optional "radar glass" overlay for the old mocked vibe */
+/* Optional "radar glass" overlay */
 .mapWrap::after{
   content:"";
   position:absolute;
   inset:0;
-  z-index:5;               /* above map, below HUD/reticle/buttons */
+  z-index:5;
   pointer-events:none;
   background:
     radial-gradient(600px 380px at 50% 50%, rgba(126,231,135,.06), transparent 70%),
@@ -145,7 +150,6 @@ body{
   100%{ transform: scale(1.2); opacity:0; }
 }
 
-
 .chipRow{
   display:flex;
   gap:8px;
@@ -172,8 +176,9 @@ body{
   background: rgba(126,231,135,.12);
 }
 
-.btnRowSpacer { flex: 1; }
+.btnRowSpacer { display:none; }
 
+/* Top-N control */
 .topNControl{
   display:flex;
   align-items:center;
@@ -185,26 +190,16 @@ body{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 13px;
 }
-
 .topNControl input{
-  width: 70px;
+  width: 56px;
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,.18);
   background: rgba(0,0,0,.25);
   color: rgba(255,255,255,.95);
   padding: 6px 8px;
 }
-body.light .topNControl{
-  background: rgba(255,255,255,.75);
-  color: rgba(0,0,0,.8);
-}
-body.light .topNControl input{
-  background: rgba(255,255,255,.85);
-  color: rgba(0,0,0,.9);
-  border: 1px solid rgba(0,0,0,.15);
-}
 
-
+/* HUD */
 .mapHUD{
   position:absolute;
   left:12px;
@@ -230,15 +225,24 @@ body.light .topNControl input{
 }
 .hudBox b{ color:var(--ink); font-weight:600; }
 
+/* --- MAP CONTROLS: mobile-safe wrapping --- */
 .btnRow{
   position:absolute;
+  left:12px;
   right:12px;
   bottom:12px;
+
   display:flex;
+  flex-wrap:wrap;
   gap:8px;
+
+  align-items:center;
+  justify-content:flex-start;
+
   pointer-events:auto;
   z-index:10;
 }
+
 .btn{
   border:1px solid var(--line);
   background: rgba(16,27,38,.75);
@@ -250,9 +254,83 @@ body.light .topNControl input{
   cursor:pointer;
   user-select:none;
   -webkit-tap-highlight-color: transparent;
+  white-space:nowrap;
 }
 .btn:active{ transform: translateY(1px); }
 
+/* Seg toggle (Hotspots/All points) */
+.segToggle{
+  display:flex;
+  flex: 1 1 auto;
+  min-width: 180px;
+  max-width: 260px;
+  border:1px solid var(--line);
+  border-radius: 14px;
+  overflow:hidden;
+  background: rgba(16,27,38,.75);
+  box-shadow: 0 8px 18px rgba(0,0,0,.35);
+}
+
+.segBtn{
+  flex:1;
+  border:0;
+  background: transparent;
+  color: var(--muted);
+  padding: 10px 12px;
+  font-size: 13px;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.segBtn.active{
+  color: var(--ink);
+  background: rgba(126,231,135,.12);
+}
+
+/* Light mode bits */
+body.light{
+  color: #0b0f12;
+  background:
+    radial-gradient(1200px 800px at 40% -10%, rgba(126,231,135,.20), transparent 60%),
+    radial-gradient(900px 700px at 110% 30%, rgba(255,204,102,.18), transparent 55%),
+    #f6f8fb;
+}
+
+body.light .topbar{
+  background: rgba(255,255,255,.70);
+}
+
+body.light .pill{
+  background: rgba(255,255,255,.70);
+  color: rgba(0,0,0,.75);
+}
+
+body.light .topNControl{
+  background: rgba(255,255,255,.75);
+  color: rgba(0,0,0,.8);
+}
+body.light .topNControl input{
+  background: rgba(255,255,255,.85);
+  color: rgba(0,0,0,.9);
+  border: 1px solid rgba(0,0,0,.15);
+}
+
+/* Mobile ordering so it never overlaps */
+@media (max-width: 430px){
+  .btnRow{ gap:6px; }
+
+  .segToggle{
+    min-width: 100%;
+    max-width: 100%;
+    order: 3;
+  }
+
+  .topNControl{ order: 4; }
+
+  #btnLocate{ order: 1; }
+  #btnResort{ order: 2; }
+}
+
+/* Deck */
 .deckWrap{
   flex: 1 1 auto;
   min-height:0;
@@ -265,6 +343,7 @@ body.light .topNControl input{
   display:flex;
   flex-direction:column;
 }
+
 .deckHeader{
   padding: 12px 14px 10px;
   display:flex;
@@ -298,28 +377,7 @@ body.light .topNControl input{
   -webkit-overflow-scrolling: touch;
 }
 .deck::-webkit-scrollbar{ display:none; }
-.segToggle{
-  display:flex;
-  border:1px solid var(--line);
-  border-radius: 14px;
-  overflow:hidden;
-  background: rgba(16,27,38,.75);
-  box-shadow: 0 8px 18px rgba(0,0,0,.35);
-}
 
-.segBtn{
-  border:0;
-  background: transparent;
-  color: var(--muted);
-  padding: 10px 12px;
-  font-size: 13px;
-  cursor:pointer;
-}
-
-.segBtn.active{
-  color: var(--ink);
-  background: rgba(126,231,135,.12);
-}
 .cardMini{
   scroll-snap-align: start;
   flex: 0 0 72%;
@@ -332,6 +390,7 @@ body.light .topNControl input{
   cursor:pointer;
   -webkit-tap-highlight-color: transparent;
 }
+
 .miniTop{
   padding:12px 12px 10px;
   display:flex;
@@ -339,6 +398,7 @@ body.light .topNControl input{
   align-items:flex-start;
   gap:10px;
 }
+
 .miniName{
   display:flex;
   flex-direction:column;
@@ -347,6 +407,7 @@ body.light .topNControl input{
 }
 .miniName strong{ font-size:16px; }
 .miniName em{ font-style:normal; color:var(--muted); font-size:12px; }
+
 .badge{
   border:1px solid var(--line);
   border-radius: 999px;
@@ -372,12 +433,21 @@ body.light .topNControl input{
     radial-gradient(380px 220px at 80% 70%, rgba(255,204,102,.10), transparent 60%),
     rgba(10,15,20,.35);
 }
+
 .plantIcon{
   width: 96px;
   height: 96px;
   opacity:.95;
   filter: drop-shadow(0 12px 22px rgba(0,0,0,.45));
 }
+
+.miniPhoto{
+  width:100%;
+  height:100%;
+  object-fit: cover;
+  display:block;
+}
+
 .miniBottom{
   padding:10px 12px 12px;
   display:flex;
@@ -389,6 +459,7 @@ body.light .topNControl input{
 }
 .miniBottom b{ color:var(--ink); font-weight:600; }
 
+/* Overlay */
 .overlay{
   position:fixed;
   inset:0;
@@ -398,7 +469,7 @@ body.light .topNControl input{
   align-items:flex-end;
   justify-content:center;
   padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
-  z-index:5000; /* above Leaflet panes/controls */
+  z-index:5000;
 }
 .overlay.show{ display:flex; }
 
@@ -413,6 +484,7 @@ body.light .topNControl input{
   display:flex;
   flex-direction:column;
 }
+
 .sheetTop{
   padding: 12px 14px 10px;
   display:flex;
@@ -423,6 +495,7 @@ body.light .topNControl input{
 }
 .sheetNames strong{ display:block; font-size:18px; }
 .sheetNames span{ display:block; color:var(--muted); font-size:13px; margin-top:4px; }
+
 .sheetClose{
   border:1px solid var(--line);
   background: rgba(0,0,0,.18);
@@ -433,16 +506,14 @@ body.light .topNControl input{
   cursor:pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.miniPhoto{
-  width:100%;
-  height:100%;
-  object-fit: cover;
-  display:block;
+
+.sheetBody{
+  padding: 12px 14px 14px;
+  overflow:auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-.specPhotoWrap{
-  width:100%;
-}
+.specPhotoWrap{ width:100%; }
 
 .specPhoto{
   width:100%;
@@ -461,14 +532,7 @@ body.light .topNControl input{
   text-decoration: none;
 }
 .imgCredit:active,
-.imgCredit:hover{
-  text-decoration: underline;
-}
-.sheetBody{
-  padding: 12px 14px 14px;
-  overflow:auto;
-  -webkit-overflow-scrolling: touch;
-}
+.imgCredit:hover{ text-decoration: underline; }
 
 .specVisual{
   border:1px solid var(--line);
@@ -491,6 +555,7 @@ body.light .topNControl input{
   grid-template-columns: 1fr 1fr;
   gap:10px;
 }
+
 .kv{
   border:1px solid var(--line);
   border-radius: 16px;
@@ -581,6 +646,7 @@ body.light .topNControl input{
     linear-gradient(180deg, rgba(30,22,14,.55), rgba(10,15,20,.25));
   padding: 14px;
 }
+
 .noteTitle{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 13px;
@@ -597,6 +663,7 @@ body.light .topNControl input{
   font-size: 14px;
   line-height: 1.35;
 }
+
 .flipBtns{
   display:flex;
   gap:10px;
@@ -614,6 +681,7 @@ body.light .topNControl input{
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Modal */
 .modal{
   position:fixed;
   inset:0;
@@ -622,7 +690,7 @@ body.light .topNControl input{
   align-items:center;
   justify-content:center;
   padding: 18px;
-  z-index:6000; /* above overlay */
+  z-index:6000;
 }
 .modal.show{ display:flex; }
 
@@ -657,6 +725,7 @@ body.light .topNControl input{
   margin-top: 14px;
 }
 .modalRow .btn{ flex:1; text-align:center; }
+
 .btnDanger{
   border-color: rgba(255,107,107,.35);
   background: rgba(255,107,107,.10);
