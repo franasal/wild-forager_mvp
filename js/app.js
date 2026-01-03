@@ -105,8 +105,6 @@ function lastDaysRange(days){
 function showAllHotspots(){
   debug("showAllHotspots()");
   const { start, end } = lastDaysRange(365);
-
-  const plants = state.selectedPlants.length ? state.selectedPlants : state.plants;
   const plants = (state.selectedPlants && state.selectedPlants.length)
   ? state.selectedPlants
   : state.plants;
