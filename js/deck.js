@@ -53,7 +53,9 @@ export function renderDeck({ onSelectPlant }){
 
   for(const {p, season, dist} of items){
     const {label, cls} = seasonBadge(season);
-    const obs = Number.isFinite(p.frequency) ? p.frequency : ((p.occurrences || []).length);
+    const local = Number.isFinite(p.localCount10km) ? p.localCount10km : 0;
+    const total = Number.isFinite(p.total) ? p.total : null;
+    const obsText = total != null ? `${local} near · ${total} total` : `${local} near`;
     const distText = (dist === Infinity) ? "no points" : `${dist.toFixed(1)} km`;
 
     const imgUrl = p.image?.filePath || "";
