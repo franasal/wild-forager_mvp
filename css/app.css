@@ -145,6 +145,33 @@ body{
   100%{ transform: scale(1.2); opacity:0; }
 }
 
+
+.chipRow{
+  display:flex;
+  gap:8px;
+  flex-wrap: wrap;
+  align-items:center;
+}
+
+.chipBtn{
+  border:1px solid var(--line);
+  background: rgba(16,27,38,.75);
+  color: var(--muted);
+  padding:10px 12px;
+  border-radius: 999px;
+  font-size:13px;
+  cursor:pointer;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 8px 18px rgba(0,0,0,.35);
+}
+
+.chipBtn.active{
+  color: var(--ink);
+  border-color: rgba(126,231,135,.35);
+  background: rgba(126,231,135,.12);
+}
+
 .btnRowSpacer { flex: 1; }
 
 .topNControl{
